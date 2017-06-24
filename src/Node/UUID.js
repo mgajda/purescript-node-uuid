@@ -29,10 +29,10 @@ exports.runUUID = function (UUID) {
   return UUID();
 };
 
-parse = function (str) {
+exports.parse = function (str) {
   return uuid.parse(str);
 };
 
-unparse = function (buffer) {
+exports.unparse = function (buffer) {
   return uuid.unparse(buffer);
 };

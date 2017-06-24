@@ -1,18 +1,20 @@
 module Node.UUID where
 
-  import Control.Monad.Eff (Eff())
+  import Control.Monad.Eff (Eff(), kind Effect)
 
-  import Data.Argonaut.Combinators ((?>>=))
-  import Data.Argonaut.Decode (DecodeJson, decodeMaybe)
-  import Data.Argonaut.Encode (EncodeJson, encodeJson)
-  import Data.Either (Either(Right))
+  import Data.Argonaut.Decode.Class (class DecodeJson)
+  import Data.Argonaut.Decode (class DecodeJson, decodeJson)
+  import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+  import Data.Either (Either(..))
   import Data.Foreign (readString)
-  import Data.Foreign.Class (IsForeign)
+  import Data.Maybe
+  import Data.Semigroup ((<>))
 
-  import Prelude (Ord, Eq, Show, (#), ($), (==), (<$>), (>>>), (>>=), show, compare)
+  import Prelude (class Ord, class Eq, class Show, (#), ($), (==), (<$>), (>>>), (>>=), show, compare,
+                  bind)
 
-  foreign import data UUID :: *
-  foreign import data UUIDEff :: !
+  foreign import data UUID    :: Type
+  foreign import data UUIDEff :: Effect
 
   foreign import uuid :: {}
   foreign import showuuid :: UUID -> String
@@ -33,15 +35,14 @@ module Node.UUID where
   instance showUUID :: Show UUID where
     show ident = showuuid ident
 
-  instance isForeignUUID :: IsForeign UUID where
-    read u = (\u' -> parse u' # unparse) <$> readString u
+  readUUID u = (\u' -> parse u' # unparse) <$> readString u
 
   instance decodeJsonUUID :: DecodeJson UUID where
-    decodeJson json = decodeMaybe json
-                 ?>>= "UUID"
-                  >>= parse
-                  >>> unparse
-                  >>> Right
+    decodeJson json = do
+      maybeUUID <- decodeJson json
+      case maybeUUID of
+        Left  e -> Left $ "UUID: " <> e
+        Right r -> Right $ unparse $ parse r
 
   instance encodeJsonUUID :: EncodeJson UUID where
     encodeJson uuid = encodeJson $ show uuid
